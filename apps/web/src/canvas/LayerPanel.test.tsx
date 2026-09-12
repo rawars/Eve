@@ -23,6 +23,39 @@ const document: CanvasDocument = {
 afterEach(cleanup)
 
 describe('LayerPanel hierarchy', () => {
+  it('separates the page list from the active page layers', () => {
+    const onChange = vi.fn()
+    const first = ensurePagesDocument(document)
+    const second = { id: 'page-2', name: 'Checkout', layers: [{ id: 'checkout-layer', name: 'Checkout layer',
+      expanded: true, visible: true, elements: [{ id: 'checkout-item', name: 'Checkout button', type: 'rectangle' as const,
+        x: 0, y: 0, width: 100, height: 40, fill: '#000', visible: true }] }] }
+    const paged = { ...first, pages: [...first.pages!, second] }
+    const { getByRole, getByText, queryByText } = render(<LayerPanel document={paged} onChange={onChange} />)
+
+    expect(getByRole('region', { name: 'Pages' })).toBeTruthy()
+    expect(getByText('Layers')).toBeTruthy()
+    expect(getByText('Item')).toBeTruthy()
+    expect(queryByText('Checkout button')).toBeNull()
+
+    fireEvent.click(getByRole('button', { name: 'Open Checkout' }))
+    const next = onChange.mock.calls.at(-1)?.[0] as CanvasDocument
+    expect(next.activePageId).toBe('page-2')
+    expect(next.layers[0].name).toBe('Checkout layer')
+    expect(next.selectedElementIds).toEqual([])
+  })
+
+  it('renames pages from the page list', () => {
+    const onChange = vi.fn()
+    const paged = ensurePagesDocument(document)
+    const { getByRole } = render(<LayerPanel document={paged} onChange={onChange} />)
+    fireEvent.doubleClick(getByRole('button', { name: 'Open Page 1' }))
+    const input = getByRole('textbox', { name: 'Page name in list' })
+    fireEvent.change(input, { target: { value: 'Home' } })
+    fireEvent.blur(input)
+    const next = onChange.mock.calls.at(-1)?.[0] as CanvasDocument
+    expect(next.pages?.[0].name).toBe('Home')
+  })
+
   it('lists reusable components in the Assets tab', () => {
     const componentDocument = { ...document, layers: document.layers.map((layer) => ({ ...layer,
       elements: layer.elements.map((element) => element.id === 'item' ? { ...element, component: true, name: 'Button' } : element) })) }

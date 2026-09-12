@@ -1,4 +1,4 @@
-import { IconBox, IconBoxMultiple, IconChevronDown, IconChevronRight, IconCircle, IconDiamond, IconDiamonds, IconEye, IconEyeOff, IconFile, IconFilePlus, IconLayersSubtract, IconLetterT, IconLock, IconLockOpen, IconPhoto, IconRectangle, IconTrash } from '@tabler/icons-react'
+import { IconBox, IconBoxMultiple, IconChevronDown, IconChevronRight, IconCircle, IconDiamond, IconDiamonds, IconEye, IconEyeOff, IconFile, IconLayersSubtract, IconLetterT, IconLock, IconLockOpen, IconPhoto, IconPlus, IconRectangle, IconTrash } from '@tabler/icons-react'
 import { useMemo, useRef, useState, type DragEvent } from 'react'
 import { Button, Input } from 'react-aria-components'
 import { syncActivePage, switchDocumentPage } from './pages'
@@ -11,7 +11,7 @@ type Props = { document: CanvasDocument; onChange: (document: CanvasDocument) =>
 
 export function LayerPanel({ document, onChange, zoom = 1, onVariableModeChange }: Props) {
   const collection = globalVariableCollection(document)
-  const [editing, setEditing] = useState<{ kind: 'layer' | 'element'; id: string } | null>(null)
+  const [editing, setEditing] = useState<{ kind: 'page' | 'layer' | 'element'; id: string } | null>(null)
   const [draftName, setDraftName] = useState('')
   const [dragged, setDragged] = useState<{ layerId: string; elementId: string } | null>(null)
   const draggedRef = useRef<{ layerId: string; elementId: string } | null>(null)
@@ -22,14 +22,16 @@ export function LayerPanel({ document, onChange, zoom = 1, onVariableModeChange 
     onChange({ ...document, layers: document.layers.map((layer) => layer.id === id ? update(layer) : layer) })
   }
 
-  function beginRename(kind: 'layer' | 'element', id: string, name: string) {
+  function beginRename(kind: 'page' | 'layer' | 'element', id: string, name: string) {
     setDraftName(name); setEditing({ kind, id })
   }
 
   function commitRename() {
     if (!editing) return
     const name = draftName.trim()
-    if (name) onChange({ ...document, layers: document.layers.map((layer) => {
+    if (name && editing.kind === 'page') {
+      onChange({ ...document, pages: pages.map((page) => page.id === editing.id ? { ...page, name } : page) })
+    } else if (name) onChange({ ...document, layers: document.layers.map((layer) => {
       if (editing.kind === 'layer' && layer.id === editing.id) return { ...layer, name }
       if (editing.kind === 'element') return { ...layer, elements: layer.elements.map((element) => element.id === editing.id ? { ...element, name } : element) }
       return layer
@@ -148,12 +150,12 @@ export function LayerPanel({ document, onChange, zoom = 1, onVariableModeChange 
   const layerRowCount = layerMetrics.reduce((count, metric) => count + 1 + metric.rows.length, 0)
   const virtualLayers = useVirtualRows(layerRowCount, 36)
 
-  return <>
-  <aside aria-label="Variable mode" className="absolute left-4 top-4 z-10 w-72 rounded-xl border border-neutral-200 bg-white p-3 shadow-[0_8px_24px_rgba(0,0,0,0.10)]">
-    <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Variable mode</div>
-    <div>
-      <label className="text-[10px] font-medium text-neutral-500">{collection?.name ?? 'Theme'} mode
-        <span className="relative mt-1 flex items-center rounded-md border border-neutral-200 bg-neutral-50">
+  return <aside aria-label="Project" className="absolute bottom-4 left-4 top-4 z-10 flex w-72 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-[0_8px_24px_rgba(0,0,0,0.10)]">
+    <header className="border-b border-neutral-100 p-3">
+      <div className="flex items-center gap-2">
+        <span className="min-w-0 flex-1 text-sm font-semibold text-neutral-900">Proyecto</span>
+        <label className="relative min-w-24">
+          <span className="sr-only">{collection?.name ?? 'Theme'} mode</span>
           <select aria-label="Layer panel active mode" disabled={!collection}
             value={collection ? document.variableModes?.[collection.id] ?? collection.modes[0].id : ''}
             onChange={(event) => {
@@ -161,35 +163,44 @@ export function LayerPanel({ document, onChange, zoom = 1, onVariableModeChange 
               if (onVariableModeChange) onVariableModeChange(collection.id, event.target.value)
               else onChange({ ...document, variableModes: { ...(document.variableModes ?? {}), [collection.id]: event.target.value } })
             }}
-            className="h-7 min-w-0 w-full appearance-none bg-transparent pl-2 pr-6 text-[11px] font-semibold outline-none disabled:text-neutral-300">
+            className="h-7 w-full appearance-none rounded-md border border-neutral-200 bg-neutral-50 pl-2 pr-6 text-[11px] font-semibold outline-none focus:border-blue-400 disabled:text-neutral-300">
             {collection?.modes.map((mode) => <option key={mode.id} value={mode.id}>{mode.name}</option>)}
-          </select><IconChevronDown className="pointer-events-none absolute right-1.5 text-neutral-400" size={12} />
-        </span>
-      </label>
-    </div>
-  </aside>
-  <aside className="absolute bottom-4 left-4 top-[132px] z-10 flex w-72 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-[0_8px_24px_rgba(0,0,0,0.10)]">
-    <header className="border-b border-neutral-100 p-2">
-      <div className="mb-1.5 flex items-center gap-1.5 px-1 text-xs font-semibold text-neutral-900"><IconFile size={14} />
-        <Input aria-label="Page name" value={pages.find((page) => page.id === document.activePageId)?.name ?? ''}
-          onChange={(event) => onChange({ ...document, pages: pages.map((page) => page.id === document.activePageId ? { ...page, name: event.target.value } : page) })}
-          className="min-w-0 flex-1 bg-transparent font-semibold outline-none focus:text-blue-600" />
-        <output aria-label="Current zoom" className="shrink-0 rounded-md bg-neutral-100 px-1.5 py-1 text-[10px] font-medium tabular-nums text-neutral-500">
+          </select><IconChevronDown className="pointer-events-none absolute right-1.5 top-2 text-neutral-400" size={12} />
+        </label>
+      </div>
+      <div className="mt-1.5 flex items-center gap-1 text-[10px] text-neutral-400">
+        <span className="min-w-0 flex-1 truncate">Pages</span>
+        <Button aria-label="Create page" onPress={addPage} className={actionClass}><IconPlus size={14} /></Button>
+        <output aria-label="Current zoom" className="shrink-0 rounded-md bg-neutral-100 px-1.5 py-1 font-medium tabular-nums text-neutral-500">
           {Math.round(zoom * 100)}%
         </output>
       </div>
-      <div className="flex items-center gap-1">
-        <span className="relative min-w-0 flex-1">
-          <select aria-label="Active page" value={document.activePageId ?? ''} onChange={(event) => onChange(switchDocumentPage(document, event.target.value))}
-            className="h-8 w-full appearance-none rounded-lg border border-neutral-200 bg-neutral-50 pl-2.5 pr-7 text-xs font-medium outline-none focus:border-blue-400">
-            {pages.map((page) => <option key={page.id} value={page.id}>{page.name}</option>)}
-          </select><IconChevronDown size={13} className="pointer-events-none absolute right-2 top-2.5 text-neutral-400" />
-        </span>
-        <Button aria-label="Create page" onPress={addPage} className={actionClass}><IconFilePlus size={15} /></Button>
-        <Button aria-label="Delete page" isDisabled={pages.length <= 1} onPress={deleteActivePage} className={`${actionClass} disabled:opacity-30`}><IconTrash size={14} /></Button>
-      </div>
-      <div className="mt-2 flex h-7 items-center gap-1.5 rounded-lg bg-neutral-100 px-2 text-xs font-semibold text-neutral-900"><IconLayersSubtract size={14} />Layers</div>
     </header>
+    <section aria-label="Pages" className="shrink-0 border-b border-neutral-100 p-2">
+      <div className="max-h-36 overflow-y-auto" role="list" aria-label="Document pages">
+        {pages.map((page) => {
+          const active = page.id === document.activePageId
+          return <div key={page.id} role="listitem" className={`group flex h-8 items-center gap-2 rounded-lg px-2 text-xs
+            ${active ? 'bg-blue-50 font-semibold text-blue-700' : 'text-neutral-600 hover:bg-neutral-50'}`}>
+            <IconFile size={14} stroke={1.6} className={active ? 'text-blue-500' : 'text-neutral-400'} aria-hidden="true" />
+            {editing?.kind === 'page' && editing.id === page.id ? nameInput('Page name in list')
+              : <button type="button" aria-label={`Open ${page.name}`} onClick={() => {
+                if (!active) onChange(switchDocumentPage(document, page.id))
+              }} onDoubleClick={() => beginRename('page', page.id, page.name)}
+              className="min-w-0 flex-1 truncate text-left outline-none">{page.name}</button>}
+            {active && <Button aria-label="Delete page" isDisabled={pages.length <= 1} onPress={deleteActivePage}
+              className={`${actionClass} opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-0`}>
+              <IconTrash size={13} />
+            </Button>}
+          </div>
+        })}
+      </div>
+    </section>
+    <div className="shrink-0 px-2 pt-2">
+      <div className="flex h-7 items-center gap-1.5 px-1 text-xs font-semibold text-neutral-900">
+        <IconLayersSubtract size={14} aria-hidden="true" />Layers
+      </div>
+    </div>
     <div ref={virtualLayers.containerRef} className="min-h-0 flex-1 overflow-y-auto p-1.5">
       <div className="relative" style={{ height: virtualLayers.totalHeight }}>
       {layerMetrics.map(({ layer, rows, offset }) => {
@@ -300,5 +311,4 @@ export function LayerPanel({ document, onChange, zoom = 1, onVariableModeChange 
       </div>
     </div>
   </aside>
-  </>
 }

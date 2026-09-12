@@ -165,15 +165,15 @@ describe('App', () => {
   })
 
   it('keeps components in global Assets when changing pages', async () => {
-    const { getByRole, findByRole, getByLabelText, getAllByText, queryByText } = render(<App />)
+    const { getByRole, findByRole, getAllByText, queryByText } = render(<App />)
     fireEvent.keyDown(window, { key: '˚', code: 'KeyK', metaKey: true, altKey: true })
     fireEvent.click(getByRole('button', { name: 'Create page' }))
-    expect(getByLabelText('Active page')).not.toHaveValue('page-1')
+    expect(getByRole('button', { name: 'Open Page 2' })).toBeInTheDocument()
     expect(queryByText('Rectangle')).toBeNull()
     fireEvent.click(getByRole('button', { name: 'Assets' }))
     expect(await findByRole('complementary', { name: 'Assets panel' })).toBeInTheDocument()
     expect(getAllByText('Rectangle')).toHaveLength(1)
-    fireEvent.change(getByLabelText('Active page'), { target: { value: 'page-1' } })
+    fireEvent.click(getByRole('button', { name: 'Open Page 1' }))
     expect(getAllByText('Rectangle').length).toBeGreaterThan(1)
   })
 
