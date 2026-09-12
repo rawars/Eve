@@ -1,0 +1,12 @@
+{
+  "name": "eve",
+  "private": true,
+  "packageManager": "pnpm@11.24.0",
+  "scripts": {
+    "dev": "pnpm --filter @eve/web dev",
+    "build": "pnpm --recursive build",
+    "test": "pnpm --recursive test",
+    "test:performance": "pnpm --filter @eve/web test:performance",
+    "typecheck": "pnpm --recursive typecheck"
+  }
+}
