@@ -391,9 +391,10 @@ function applyFrameLayouts(elements: CanvasElement[]) {
 type CanvasEditorProps = {
   initialDocument?: CanvasDocument
   onDocumentChange?: (document: CanvasDocument) => void
+  account?: { label: string; onLogout: () => void | Promise<void> }
 }
 
-export function CanvasEditor({ initialDocument, onDocumentChange }: CanvasEditorProps = {}) {
+export function CanvasEditor({ initialDocument, onDocumentChange, account }: CanvasEditorProps = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const textInputRef = useRef<HTMLInputElement>(null)
   const initializedRef = useRef(false)
@@ -2097,6 +2098,7 @@ export function CanvasEditor({ initialDocument, onDocumentChange }: CanvasEditor
       className="pointer-events-none absolute z-30 size-px overflow-hidden opacity-0"
       style={{ left: textDraft.screenX, top: textDraft.screenY }} />}
     <ToolbarPanel activeTool={activeTool} onToolChange={(tool) => { setActiveTool(tool); setHistoryOpen(false); setAssetsOpen(false) }}
+      account={account}
       onDownload={() => { void import('./export').then(({ downloadDocument }) => downloadDocument(document)) }}
       onHistory={() => { setVariablesOpen(false); setAssetsOpen(false); setHistoryOpen(true) }}
       onVariables={() => { setAssetsOpen(false); setVariablesOpen(true) }} onAssets={() => {

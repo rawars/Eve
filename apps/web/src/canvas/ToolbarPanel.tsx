@@ -1,4 +1,4 @@
-import { IconBox, IconBraces, IconChevronDown, IconCircle, IconComponents, IconDownload, IconHandStop, IconHistory, IconLetterT, IconPointer, IconRectangle } from '@tabler/icons-react'
+import { IconBox, IconBraces, IconChevronDown, IconCircle, IconComponents, IconDownload, IconHandStop, IconHistory, IconLetterT, IconLogout, IconPointer, IconRectangle } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { Button, Dialog, DialogTrigger, Popover } from 'react-aria-components'
 import { tv } from 'tailwind-variants'
@@ -17,13 +17,14 @@ const tools = [
   { id: 'text', label: 'Text', icon: IconLetterT },
 ]
 
-export function ToolbarPanel({ activeTool, onToolChange, onDownload, onHistory, onVariables, onAssets }: {
+export function ToolbarPanel({ activeTool, onToolChange, onDownload, onHistory, onVariables, onAssets, account }: {
   activeTool: Tool
   onToolChange: (tool: Tool) => void
   onDownload: () => void
   onHistory: () => void
   onVariables: () => void
   onAssets: () => void
+  account?: { label: string; onLogout: () => void | Promise<void> }
 }) {
   const [selectedShape, setSelectedShape] = useState<'rectangle' | 'circle'>('rectangle')
   useEffect(() => {
@@ -64,5 +65,21 @@ export function ToolbarPanel({ activeTool, onToolChange, onDownload, onHistory, 
     <Button aria-label="Assets" className={toolButton()} onPress={onAssets}>
       <IconComponents size={18} stroke={1.8} />
     </Button>
+    {account && <>
+      <span aria-hidden="true" className="mx-1 h-5 w-px bg-neutral-200" />
+      <DialogTrigger>
+        <Button aria-label="Account menu" className="grid size-8 place-items-center rounded-full bg-orange-500 text-xs font-semibold uppercase text-white outline-none transition-colors hover:bg-orange-600 focus-visible:ring-2 focus-visible:ring-blue-500">
+          {account.label.trim().charAt(0) || 'E'}
+        </Button>
+        <Popover placement="bottom end" offset={8} className="w-56 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.18)] outline-none">
+          <Dialog aria-label="Account options" className="outline-none">
+            <p className="truncate border-b border-neutral-100 px-2 py-2 text-xs text-neutral-500">{account.label}</p>
+            <Button onPress={account.onLogout} className="mt-1 flex h-9 w-full items-center gap-2 rounded-lg px-2 text-left text-sm text-neutral-700 outline-none hover:bg-neutral-100 focus-visible:bg-blue-50">
+              <IconLogout size={17} stroke={1.8} /> Log out
+            </Button>
+          </Dialog>
+        </Popover>
+      </DialogTrigger>
+    </>}
   </nav>
 }

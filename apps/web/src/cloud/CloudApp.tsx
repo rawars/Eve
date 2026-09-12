@@ -63,13 +63,26 @@ export function CloudApp({ apiUrl }: { apiUrl: string }) {
     saveTimer.current = window.setTimeout(() => { void save() }, 2000)
   }, [save])
 
+  const logout = useCallback(async () => {
+    window.clearTimeout(saveTimer.current)
+    await save()
+    await client.logout()
+    pendingDocument.current = null
+    activeFile.current = null
+    setActive(null)
+    setUser(null)
+    setProjects([])
+    setFiles([])
+    setMessage('')
+  }, [client, save])
+
   if (loading) return <Centered><p className="text-sm text-neutral-500">Loading Eve…</p></Centered>
   if (!user) return <AuthScreen client={client} onAuthenticated={async (current) => {
     setUser(current); const next = await refreshProjects(); await refreshFiles(next[0]?.id ?? '')
   }} />
   if (active) return <main className="h-dvh w-dvw overflow-hidden bg-neutral-100">
-    <CanvasEditor key={active.file.id} initialDocument={active.document} onDocumentChange={documentChanged} />
-    <div className="fixed left-1/2 top-3 z-50 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-neutral-200 bg-white/95 px-2 py-1 shadow-sm">
+    <CanvasEditor key={active.file.id} initialDocument={active.document} onDocumentChange={documentChanged} account={{ label: user.email, onLogout: logout }} />
+    <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2 rounded-lg border border-neutral-200 bg-white/95 px-2 py-1 shadow-sm">
       <button className="rounded p-1 hover:bg-neutral-100" aria-label="Back to files" onClick={() => { void save(); setActive(null); void refreshFiles(activeProjectId) }}><IconArrowLeft size={16} /></button>
       <span className="max-w-48 truncate text-xs font-medium">{active.file.name}</span>
       <span className="text-[11px] text-neutral-500">{message}</span>
