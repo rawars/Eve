@@ -388,7 +388,12 @@ function applyFrameLayouts(elements: CanvasElement[]) {
   return next
 }
 
-export function CanvasEditor() {
+type CanvasEditorProps = {
+  initialDocument?: CanvasDocument
+  onDocumentChange?: (document: CanvasDocument) => void
+}
+
+export function CanvasEditor({ initialDocument, onDocumentChange }: CanvasEditorProps = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const textInputRef = useRef<HTMLInputElement>(null)
   const initializedRef = useRef(false)
@@ -400,6 +405,9 @@ export function CanvasEditor() {
   const tileRendererRef = useRef(new CanvasTileRenderer())
   const suppressHistoryRef = useRef(false)
   const persistentDocumentRef = useRef<CanvasDocument | null>(null)
+  const initialDocumentRef = useRef(initialDocument)
+  const onDocumentChangeRef = useRef(onDocumentChange)
+  onDocumentChangeRef.current = onDocumentChange
   const persistentDocumentCheckedRef = useRef(false)
   const [document, setDocumentState] = useState<CanvasDocument>({ layers: [], activeElementId: null, selectedElementIds: [], background: '#E0E0E0' })
   const boundVariableCount = useMemo(() => document.layers.reduce((count, layer) => count
@@ -514,7 +522,7 @@ export function CanvasEditor() {
       && current.pixelRatio === pixelRatio ? current : { width: bounds.width, height: bounds.height, pixelRatio })
     if (!initializedRef.current) {
       initializedRef.current = true
-      if (!persistentDocumentCheckedRef.current && typeof indexedDB !== 'undefined') {
+      if (!initialDocumentRef.current && !persistentDocumentCheckedRef.current && typeof indexedDB !== 'undefined') {
         persistentDocumentCheckedRef.current = true
         void loadPersistentDocument().then((persistent) => {
           persistentDocumentRef.current = persistent
@@ -524,7 +532,8 @@ export function CanvasEditor() {
         return
       }
       persistentDocumentCheckedRef.current = true
-      const stored = persistentDocumentRef.current ?? loadDocument()
+      const stored = initialDocumentRef.current ?? persistentDocumentRef.current ?? loadDocument()
+      initialDocumentRef.current = undefined
       persistentDocumentRef.current = null
       const variableCollections = stored?.variableCollections?.map((collection) => {
         if (collection.modes.length !== 1) return collection
@@ -587,7 +596,10 @@ export function CanvasEditor() {
   }, [resizeCanvas])
 
   useEffect(() => {
-    if (documentLoaded) saveDocument(document)
+    if (documentLoaded) {
+      saveDocument(document)
+      onDocumentChangeRef.current?.(document)
+    }
   }, [document, documentLoaded])
 
   useEffect(() => saveViewport(viewport), [viewport])

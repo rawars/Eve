@@ -4,6 +4,7 @@
   "packageManager": "pnpm@11.24.0",
   "scripts": {
     "dev": "pnpm --filter @eve/web dev",
+    "dev:api": "pnpm --filter @eve/api dev",
     "build": "pnpm --recursive build",
     "test": "pnpm --recursive test",
     "test:performance": "pnpm --filter @eve/web test:performance",

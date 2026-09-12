@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "eve-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-12",
+  "compatibility_flags": ["global_fetch_strictly_public"],
+  "observability": { "enabled": true },
+  "vars": {
+    "APP_ORIGIN": "https://eve-17s.pages.dev",
+    "SESSION_TTL_DAYS": "30",
+    "TURNSTILE_ENABLED": "true"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "eve",
+      "database_id": "366e05bc-3b91-4654-b117-610436692e0d",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "DOCUMENTS",
+      "bucket_name": "eve-documents"
+    }
+  ]
+}
