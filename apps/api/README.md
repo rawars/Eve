@@ -10,14 +10,22 @@ Cloudflare Worker responsible for authentication and cloud document persistence.
 
 ## Local setup
 
-1. Copy `.dev.vars.example` to `.dev.vars`.
-2. Run `pnpm --filter @eve/api db:migrate:local`.
-3. Run `pnpm dev:api`.
+From the repository root:
 
-Turnstile is disabled locally. In production, create a widget, set `TURNSTILE_ENABLED=true`, and store its secret with:
+1. Copy `apps/api/.dev.vars.example` to `apps/api/.dev.vars`.
+2. Copy `apps/web/.env.example` to `apps/web/.env.local`.
+3. Run `pnpm --filter @eve/api db:migrate:local` once and whenever a new migration is added.
+4. Run `pnpm dev:api` in one terminal.
+5. Run `pnpm dev` in a second terminal.
+
+The web app runs at `http://localhost:5173` and the Worker API at `http://localhost:8787`.
+
+Wrangler uses local D1 and R2 simulations by default. Their state is persisted below `apps/api/.wrangler/state` and never modifies production unless a command explicitly uses `--remote`.
+
+The example files use Cloudflare's official always-pass Turnstile test keys. They work on localhost and must never be used in production. Production uses the real widget site key and stores its secret with:
 
 ```sh
 pnpm --filter @eve/api exec wrangler secret put TURNSTILE_SECRET_KEY
 ```
 
-Before deploying, create the D1 database and R2 bucket, then replace the D1 database ID in `wrangler.jsonc`.
+The production D1 database and R2 bucket are configured in `wrangler.jsonc`. Use `--local` for local database commands and `--remote` only when intentionally changing production.
