@@ -393,10 +393,11 @@ type CanvasEditorProps = {
   onDocumentChange?: (document: CanvasDocument) => void
   fileName?: string
   onFileNameChange?: (name: string) => void | Promise<void>
+  onBack?: () => void | Promise<void>
   account?: { label: string; onLogout: () => void | Promise<void> }
 }
 
-export function CanvasEditor({ initialDocument, onDocumentChange, fileName, onFileNameChange, account }: CanvasEditorProps = {}) {
+export function CanvasEditor({ initialDocument, onDocumentChange, fileName, onFileNameChange, onBack, account }: CanvasEditorProps = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const textInputRef = useRef<HTMLInputElement>(null)
   const initializedRef = useRef(false)
@@ -1859,7 +1860,7 @@ export function CanvasEditor({ initialDocument, onDocumentChange, fileName, onFi
           onClick={() => reorder(false)}><span>Send to back</span><span className="text-neutral-400">[</span></button>
       </div>
     })()}
-    <LayerPanel document={document} onChange={setDocument} zoom={viewport.zoom} fileName={fileName} onFileNameChange={onFileNameChange}
+    <LayerPanel document={document} onChange={setDocument} zoom={viewport.zoom} fileName={fileName} onFileNameChange={onFileNameChange} onBack={onBack}
       onVariableModeChange={(collectionId, modeId) => {
         setModeTransition({ from: resolvedDocument, progress: 0 })
         setDocument((current) => ({ ...current, variableModes: { ...(current.variableModes ?? {}), [collectionId]: modeId } }))

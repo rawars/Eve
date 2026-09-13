@@ -1,4 +1,4 @@
-import { IconBox, IconBoxMultiple, IconChevronDown, IconChevronRight, IconCircle, IconDiamond, IconDiamonds, IconEye, IconEyeOff, IconFile, IconLayersSubtract, IconLetterT, IconLock, IconLockOpen, IconPhoto, IconPlus, IconRectangle, IconTrash } from '@tabler/icons-react'
+import { IconArrowLeft, IconBox, IconBoxMultiple, IconChevronDown, IconChevronRight, IconCircle, IconDiamond, IconDiamonds, IconEye, IconEyeOff, IconFile, IconLayersSubtract, IconLetterT, IconLock, IconLockOpen, IconPhoto, IconPlus, IconRectangle, IconTrash } from '@tabler/icons-react'
 import { useMemo, useRef, useState, type DragEvent } from 'react'
 import { Button, Input } from 'react-aria-components'
 import { syncActivePage, switchDocumentPage } from './pages'
@@ -8,9 +8,10 @@ import { useVirtualRows } from './useVirtualRows'
 
 type Props = { document: CanvasDocument; onChange: (document: CanvasDocument) => void; zoom?: number; fileName?: string
   onFileNameChange?: (name: string) => void | Promise<void>
+  onBack?: () => void | Promise<void>
   onVariableModeChange?: (collectionId: string, modeId: string) => void }
 
-export function LayerPanel({ document, onChange, zoom = 1, fileName, onFileNameChange, onVariableModeChange }: Props) {
+export function LayerPanel({ document, onChange, zoom = 1, fileName, onFileNameChange, onBack, onVariableModeChange }: Props) {
   const collection = globalVariableCollection(document)
   const [editing, setEditing] = useState<{ kind: 'page' | 'layer' | 'element'; id: string } | null>(null)
   const [draftName, setDraftName] = useState('')
@@ -169,6 +170,10 @@ export function LayerPanel({ document, onChange, zoom = 1, fileName, onFileNameC
   return <aside aria-label="Project" className="absolute bottom-4 left-4 top-4 z-10 flex w-72 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-[0_8px_24px_rgba(0,0,0,0.10)]">
     <header className="border-b border-neutral-100 p-3">
       <div className="flex items-center gap-2">
+        {onBack && <Button aria-label="Back to files" onPress={onBack}
+          className="grid size-7 shrink-0 place-items-center rounded-md text-neutral-500 outline-none hover:bg-neutral-100 hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-blue-500">
+          <IconArrowLeft size={16} stroke={1.8} />
+        </Button>}
         {editingFileName ? <Input autoFocus aria-label="File name" value={fileNameDraft}
           onChange={(event) => setFileNameDraft(event.target.value)} onBlur={commitFileRename}
           onKeyDown={(event) => {

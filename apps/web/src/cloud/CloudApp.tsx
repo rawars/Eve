@@ -1,5 +1,5 @@
 import type { DesignFile, Project, User } from '@eve/contracts'
-import { IconArrowLeft, IconFile, IconFolder, IconLogout, IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconFile, IconFolder, IconLogout, IconPlus, IconTrash } from '@tabler/icons-react'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { CanvasEditor } from '../canvas/CanvasEditor'
 import type { CanvasDocument } from '../canvas/types'
@@ -17,7 +17,7 @@ export function CloudApp({ apiUrl }: { apiUrl: string }) {
   const [files, setFiles] = useState<DesignFile[]>([])
   const [active, setActive] = useState<{ file: DesignFile; document: CanvasDocument } | null>(null)
   const [loading, setLoading] = useState(true)
-  const [message, setMessage] = useState('')
+  const [, setMessage] = useState('')
   const saveTimer = useRef<number | undefined>(undefined)
   const pendingDocument = useRef<CanvasDocument | null>(null)
   const activeFile = useRef<DesignFile | null>(null)
@@ -84,18 +84,20 @@ export function CloudApp({ apiUrl }: { apiUrl: string }) {
     setActive((current) => current ? { ...current, file: renamed } : current)
   }, [client])
 
+  const closeActiveFile = useCallback(async () => {
+    await save()
+    setActive(null)
+    await refreshFiles(activeProjectId)
+  }, [activeProjectId, refreshFiles, save])
+
   if (loading) return <Centered><p className="text-sm text-neutral-500">Loading Eve…</p></Centered>
   if (!user) return <AuthScreen client={client} onAuthenticated={async (current) => {
     setUser(current); const next = await refreshProjects(); await refreshFiles(next[0]?.id ?? '')
   }} />
   if (active) return <main className="h-dvh w-dvw overflow-hidden bg-neutral-100">
     <CanvasEditor key={active.file.id} initialDocument={active.document} onDocumentChange={documentChanged}
-      fileName={active.file.name} onFileNameChange={renameActiveFile} account={{ label: user.email, onLogout: logout }} />
-    <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2 rounded-lg border border-neutral-200 bg-white/95 px-2 py-1 shadow-sm">
-      <button className="rounded p-1 hover:bg-neutral-100" aria-label="Back to files" onClick={() => { void save(); setActive(null); void refreshFiles(activeProjectId) }}><IconArrowLeft size={16} /></button>
-      <span className="max-w-48 truncate text-xs font-medium">{active.file.name}</span>
-      <span className="text-[11px] text-neutral-500">{message}</span>
-    </div>
+      fileName={active.file.name} onFileNameChange={renameActiveFile} onBack={closeActiveFile}
+      account={{ label: user.email, onLogout: logout }} />
   </main>
 
   return <FileDashboard user={user} projects={projects} activeProjectId={activeProjectId} files={files}
