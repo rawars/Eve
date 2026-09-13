@@ -76,12 +76,21 @@ export function CloudApp({ apiUrl }: { apiUrl: string }) {
     setMessage('')
   }, [client, save])
 
+  const renameActiveFile = useCallback(async (name: string) => {
+    const file = activeFile.current
+    if (!file) return
+    const { file: renamed } = await client.renameFile(file.id, name)
+    activeFile.current = renamed
+    setActive((current) => current ? { ...current, file: renamed } : current)
+  }, [client])
+
   if (loading) return <Centered><p className="text-sm text-neutral-500">Loading Eve…</p></Centered>
   if (!user) return <AuthScreen client={client} onAuthenticated={async (current) => {
     setUser(current); const next = await refreshProjects(); await refreshFiles(next[0]?.id ?? '')
   }} />
   if (active) return <main className="h-dvh w-dvw overflow-hidden bg-neutral-100">
-    <CanvasEditor key={active.file.id} initialDocument={active.document} onDocumentChange={documentChanged} account={{ label: user.email, onLogout: logout }} />
+    <CanvasEditor key={active.file.id} initialDocument={active.document} onDocumentChange={documentChanged}
+      fileName={active.file.name} onFileNameChange={renameActiveFile} account={{ label: user.email, onLogout: logout }} />
     <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2 rounded-lg border border-neutral-200 bg-white/95 px-2 py-1 shadow-sm">
       <button className="rounded p-1 hover:bg-neutral-100" aria-label="Back to files" onClick={() => { void save(); setActive(null); void refreshFiles(activeProjectId) }}><IconArrowLeft size={16} /></button>
       <span className="max-w-48 truncate text-xs font-medium">{active.file.name}</span>
@@ -94,7 +103,7 @@ export function CloudApp({ apiUrl }: { apiUrl: string }) {
     onProjectCreate={async () => { const name = window.prompt('Project name', 'Untitled project')?.trim(); if (!name) return; const { project } = await client.createProject(name); await refreshProjects(); setActiveProjectId(project.id); await refreshFiles(project.id) }}
     onProjectDelete={async (project) => { if (!window.confirm(`Delete project “${project.name}” and all its files?`)) return; await client.deleteProject(project.id); const next = await refreshProjects(); await refreshFiles(next[0]?.id ?? '') }}
     onOpen={async (file) => { setLoading(true); try { setActive(await client.readFile(file.id)); setMessage('Saved') } finally { setLoading(false) } }}
-    onCreate={async () => { if (!activeProjectId) return; const { file } = await client.createFile(activeProjectId, 'Untitled', EMPTY_DOCUMENT); await refreshFiles(activeProjectId); setActive({ file, document: EMPTY_DOCUMENT }) }}
+    onCreate={async () => { if (!activeProjectId) return; const name = window.prompt('File name', 'Untitled')?.trim(); if (!name) return; const { file } = await client.createFile(activeProjectId, name, EMPTY_DOCUMENT); await refreshFiles(activeProjectId); setActive({ file, document: EMPTY_DOCUMENT }) }}
     onDelete={async (file) => { if (!window.confirm(`Delete “${file.name}”?`)) return; await client.deleteFile(file.id); await refreshFiles(activeProjectId) }}
     onLogout={async () => { await client.logout(); setUser(null); setProjects([]); setFiles([]) }} />
 }

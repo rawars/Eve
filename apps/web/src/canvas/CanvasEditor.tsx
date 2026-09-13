@@ -391,10 +391,12 @@ function applyFrameLayouts(elements: CanvasElement[]) {
 type CanvasEditorProps = {
   initialDocument?: CanvasDocument
   onDocumentChange?: (document: CanvasDocument) => void
+  fileName?: string
+  onFileNameChange?: (name: string) => void | Promise<void>
   account?: { label: string; onLogout: () => void | Promise<void> }
 }
 
-export function CanvasEditor({ initialDocument, onDocumentChange, account }: CanvasEditorProps = {}) {
+export function CanvasEditor({ initialDocument, onDocumentChange, fileName, onFileNameChange, account }: CanvasEditorProps = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const textInputRef = useRef<HTMLInputElement>(null)
   const initializedRef = useRef(false)
@@ -1857,7 +1859,7 @@ export function CanvasEditor({ initialDocument, onDocumentChange, account }: Can
           onClick={() => reorder(false)}><span>Send to back</span><span className="text-neutral-400">[</span></button>
       </div>
     })()}
-    <LayerPanel document={document} onChange={setDocument} zoom={viewport.zoom}
+    <LayerPanel document={document} onChange={setDocument} zoom={viewport.zoom} fileName={fileName} onFileNameChange={onFileNameChange}
       onVariableModeChange={(collectionId, modeId) => {
         setModeTransition({ from: resolvedDocument, progress: 0 })
         setDocument((current) => ({ ...current, variableModes: { ...(current.variableModes ?? {}), [collectionId]: modeId } }))

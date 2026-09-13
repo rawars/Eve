@@ -6,10 +6,11 @@ import { globalVariableCollection } from './variables'
 import type { CanvasDocument, CanvasElement } from './types'
 import { useVirtualRows } from './useVirtualRows'
 
-type Props = { document: CanvasDocument; onChange: (document: CanvasDocument) => void; zoom?: number
+type Props = { document: CanvasDocument; onChange: (document: CanvasDocument) => void; zoom?: number; fileName?: string
+  onFileNameChange?: (name: string) => void | Promise<void>
   onVariableModeChange?: (collectionId: string, modeId: string) => void }
 
-export function LayerPanel({ document, onChange, zoom = 1, onVariableModeChange }: Props) {
+export function LayerPanel({ document, onChange, zoom = 1, fileName, onFileNameChange, onVariableModeChange }: Props) {
   const collection = globalVariableCollection(document)
   const [editing, setEditing] = useState<{ kind: 'page' | 'layer' | 'element'; id: string } | null>(null)
   const [draftName, setDraftName] = useState('')
@@ -17,6 +18,21 @@ export function LayerPanel({ document, onChange, zoom = 1, onVariableModeChange 
   const draggedRef = useRef<{ layerId: string; elementId: string } | null>(null)
   const [dropTarget, setDropTarget] = useState<{ elementId: string; position: 'before' | 'inside' | 'after' } | null>(null)
   const dropTargetRef = useRef<{ elementId: string; position: 'before' | 'inside' | 'after' } | null>(null)
+  const [editingFileName, setEditingFileName] = useState(false)
+  const [fileNameDraft, setFileNameDraft] = useState('')
+
+  function beginFileRename() {
+    if (!fileName || !onFileNameChange) return
+    setFileNameDraft(fileName)
+    setEditingFileName(true)
+  }
+
+  function commitFileRename() {
+    if (!editingFileName) return
+    const name = fileNameDraft.trim()
+    setEditingFileName(false)
+    if (name && name !== fileName) void onFileNameChange?.(name)
+  }
 
   function updateLayer(id: string, update: (layer: CanvasDocument['layers'][number]) => CanvasDocument['layers'][number]) {
     onChange({ ...document, layers: document.layers.map((layer) => layer.id === id ? update(layer) : layer) })
@@ -153,7 +169,18 @@ export function LayerPanel({ document, onChange, zoom = 1, onVariableModeChange 
   return <aside aria-label="Project" className="absolute bottom-4 left-4 top-4 z-10 flex w-72 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-[0_8px_24px_rgba(0,0,0,0.10)]">
     <header className="border-b border-neutral-100 p-3">
       <div className="flex items-center gap-2">
-        <span className="min-w-0 flex-1 text-sm font-semibold text-neutral-900">Proyecto</span>
+        {editingFileName ? <Input autoFocus aria-label="File name" value={fileNameDraft}
+          onChange={(event) => setFileNameDraft(event.target.value)} onBlur={commitFileRename}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur()
+            if (event.key === 'Escape') setEditingFileName(false)
+          }}
+          className="min-w-0 flex-1 rounded-md border border-blue-400 bg-white px-1.5 py-1 text-sm font-semibold outline-none ring-2 ring-blue-100" />
+          : <button type="button" onClick={beginFileRename} disabled={!onFileNameChange}
+            aria-label={onFileNameChange ? `Rename file ${fileName}` : undefined}
+            className="min-w-0 flex-1 truncate rounded px-0.5 py-1 text-left text-sm font-semibold text-neutral-900 outline-none hover:bg-neutral-100 disabled:hover:bg-transparent">
+            {fileName ?? 'Proyecto'}
+          </button>}
         <label className="relative min-w-24">
           <span className="sr-only">{collection?.name ?? 'Theme'} mode</span>
           <select aria-label="Layer panel active mode" disabled={!collection}
