@@ -7,6 +7,16 @@ import { ApiClient, ApiRequestError } from './api'
 import { turnstileSiteKey } from './config'
 
 const EMPTY_DOCUMENT: CanvasDocument = { layers: [], activeElementId: null, selectedElementIds: [], background: '#E0E0E0' }
+const FILE_ROUTE = /^\/files\/([^/]+)\/?$/
+
+function routedFileId() {
+  const match = window.location.pathname.match(FILE_ROUTE)
+  return match ? decodeURIComponent(match[1]) : ''
+}
+
+function fileRoute(fileId: string) {
+  return `/files/${encodeURIComponent(fileId)}`
+}
 
 export function CloudApp({ apiUrl }: { apiUrl: string }) {
   const clientRef = useRef(new ApiClient(apiUrl.replace(/\/$/, '')))
@@ -29,14 +39,35 @@ export function CloudApp({ apiUrl }: { apiUrl: string }) {
     setActiveProjectId((current) => current && next.some(({ id }) => id === current) ? current : next[0]?.id ?? '')
     return next
   }, [client])
+
+  const loadFile = useCallback(async (fileId: string) => {
+    setLoading(true)
+    try {
+      setActive(await client.readFile(fileId))
+      setMessage('Saved')
+    } finally { setLoading(false) }
+  }, [client])
+
   useEffect(() => {
     void client.me().then(async ({ user: current }) => {
       setUser(current)
       const next = await refreshProjects()
       await refreshFiles(next[0]?.id ?? '')
+      const fileId = routedFileId()
+      if (fileId) await loadFile(fileId)
     })
       .catch(() => {}).finally(() => setLoading(false))
-  }, [client, refreshFiles, refreshProjects])
+  }, [client, loadFile, refreshFiles, refreshProjects])
+
+  useEffect(() => {
+    const navigate = () => {
+      const fileId = routedFileId()
+      if (fileId) void loadFile(fileId)
+      else setActive(null)
+    }
+    window.addEventListener('popstate', navigate)
+    return () => window.removeEventListener('popstate', navigate)
+  }, [loadFile])
 
   useEffect(() => { activeFile.current = active?.file ?? null }, [active?.file])
 
@@ -69,6 +100,7 @@ export function CloudApp({ apiUrl }: { apiUrl: string }) {
     await client.logout()
     pendingDocument.current = null
     activeFile.current = null
+    window.history.replaceState(null, '', '/')
     setActive(null)
     setUser(null)
     setProjects([])
@@ -86,6 +118,7 @@ export function CloudApp({ apiUrl }: { apiUrl: string }) {
 
   const closeActiveFile = useCallback(async () => {
     await save()
+    window.history.pushState(null, '', '/')
     setActive(null)
     await refreshFiles(activeProjectId)
   }, [activeProjectId, refreshFiles, save])
@@ -93,6 +126,8 @@ export function CloudApp({ apiUrl }: { apiUrl: string }) {
   if (loading) return <Centered><p className="text-sm text-neutral-500">Loading Eve…</p></Centered>
   if (!user) return <AuthScreen client={client} onAuthenticated={async (current) => {
     setUser(current); const next = await refreshProjects(); await refreshFiles(next[0]?.id ?? '')
+    const fileId = routedFileId()
+    if (fileId) await loadFile(fileId)
   }} />
   if (active) return <main className="h-dvh w-dvw overflow-hidden bg-neutral-100">
     <CanvasEditor key={active.file.id} initialDocument={active.document} onDocumentChange={documentChanged}
@@ -104,8 +139,8 @@ export function CloudApp({ apiUrl }: { apiUrl: string }) {
     onProjectChange={async (projectId) => { setActiveProjectId(projectId); await refreshFiles(projectId) }}
     onProjectCreate={async () => { const name = window.prompt('Project name', 'Untitled project')?.trim(); if (!name) return; const { project } = await client.createProject(name); await refreshProjects(); setActiveProjectId(project.id); await refreshFiles(project.id) }}
     onProjectDelete={async (project) => { if (!window.confirm(`Delete project “${project.name}” and all its files?`)) return; await client.deleteProject(project.id); const next = await refreshProjects(); await refreshFiles(next[0]?.id ?? '') }}
-    onOpen={async (file) => { setLoading(true); try { setActive(await client.readFile(file.id)); setMessage('Saved') } finally { setLoading(false) } }}
-    onCreate={async () => { if (!activeProjectId) return; const name = window.prompt('File name', 'Untitled')?.trim(); if (!name) return; const { file } = await client.createFile(activeProjectId, name, EMPTY_DOCUMENT); await refreshFiles(activeProjectId); setActive({ file, document: EMPTY_DOCUMENT }) }}
+    onOpen={async (file) => { window.history.pushState(null, '', fileRoute(file.id)); await loadFile(file.id) }}
+    onCreate={async () => { if (!activeProjectId) return; const name = window.prompt('File name', 'Untitled')?.trim(); if (!name) return; const { file } = await client.createFile(activeProjectId, name, EMPTY_DOCUMENT); await refreshFiles(activeProjectId); window.history.pushState(null, '', fileRoute(file.id)); setActive({ file, document: EMPTY_DOCUMENT }) }}
     onDelete={async (file) => { if (!window.confirm(`Delete “${file.name}”?`)) return; await client.deleteFile(file.id); await refreshFiles(activeProjectId) }}
     onLogout={async () => { await client.logout(); setUser(null); setProjects([]); setFiles([]) }} />
 }
