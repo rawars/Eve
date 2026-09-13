@@ -1,5 +1,8 @@
 const encoder = new TextEncoder()
-const PASSWORD_ITERATIONS = 210_000
+// Cloudflare Workers Web Crypto currently accepts at most 100,000 PBKDF2
+// iterations. Keep the encoded work factor in each hash so it remains
+// possible to raise this safely if the runtime limit changes.
+const PASSWORD_ITERATIONS = 100_000
 
 function bytesToBase64(bytes: Uint8Array) {
   let binary = ''

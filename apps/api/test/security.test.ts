@@ -5,6 +5,7 @@ describe('password security', () => {
   it('hashes and verifies without storing the password', async () => {
     const encoded = await hashPassword('correct horse battery staple')
     expect(encoded).not.toContain('correct horse')
+    expect(encoded).toMatch(/^pbkdf2-sha256\$100000\$/)
     expect(await verifyPassword('correct horse battery staple', encoded)).toBe(true)
     expect(await verifyPassword('wrong password', encoded)).toBe(false)
   })
