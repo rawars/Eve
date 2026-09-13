@@ -12,7 +12,8 @@ function cookieValue(request: Request, name: string) {
 }
 
 function sessionCookie(token: string, maxAge: number, secure: boolean) {
-  return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure ? '; Secure' : ''}`
+  const sitePolicy = secure ? '; SameSite=None; Secure; Partitioned' : '; SameSite=Lax'
+  return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; Max-Age=${maxAge}${sitePolicy}`
 }
 
 function normalizeCredentials(value: Credentials | null) {
