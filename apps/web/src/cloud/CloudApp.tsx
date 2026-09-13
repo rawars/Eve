@@ -156,6 +156,7 @@ export function CloudApp({ apiUrl }: { apiUrl: string }) {
   if (active) return <main className="h-dvh w-dvw overflow-hidden bg-neutral-100">
     <CanvasEditor key={active.file.id} initialDocument={active.document} onDocumentChange={documentChanged}
       fileName={active.file.name} onFileNameChange={renameActiveFile} onBack={closeActiveFile}
+      onAiEdit={(instruction, targetId, context) => client.generateAiEdit(active.file.id, instruction, targetId, context)}
       account={{ label: user.email, onLogout: logout }} />
   </main>
 

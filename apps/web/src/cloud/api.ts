@@ -1,4 +1,4 @@
-import type { AuthResponse, DesignFile, FileContentResponse, FileListResponse, FileResponse, ProjectListResponse, ProjectResponse } from '@eve/contracts'
+import type { AiEditResponse, AuthResponse, DesignFile, FileContentResponse, FileListResponse, FileResponse, ProjectListResponse, ProjectResponse } from '@eve/contracts'
 import type { CanvasDocument, CanvasElement } from '../canvas/types'
 
 const CLOUD_ASSET_PREFIX = 'r2-asset:'
@@ -37,6 +37,11 @@ export class ApiClient {
   }
   renameFile(id: string, name: string) {
     return this.request<FileResponse>(`/files/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ name }) })
+  }
+  generateAiEdit(fileId: string, instruction: string, targetId: string, context: unknown) {
+    return this.request<AiEditResponse>(`/files/${encodeURIComponent(fileId)}/ai-edit`, {
+      method: 'POST', body: JSON.stringify({ instruction, targetId, context }),
+    })
   }
   deleteFile(id: string) { return this.request<void>(`/files/${encodeURIComponent(id)}`, { method: 'DELETE' }) }
   async readFile(id: string) {

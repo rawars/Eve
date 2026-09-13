@@ -1,4 +1,5 @@
 import { authenticatedUser, login, logout, register } from './auth'
+import { generateAiEdit } from './ai'
 import { createFile, deleteFile, getAsset, listFiles, putAsset, readFile, renameFile, updateFile } from './files'
 import { corsHeaders, error, json, mutationOriginAllowed, withCors } from './http'
 import { createProject, deleteProject, listProjects, renameProject } from './projects'
@@ -36,6 +37,9 @@ async function route(request: Request, env: Env, context: ExecutionContext) {
     if (request.method === 'PUT') return putAsset(request, env, user, fileId, assetId)
     return error('METHOD_NOT_ALLOWED', 'Method not allowed.', 405)
   }
+
+  const aiEditMatch = url.pathname.match(/^\/files\/([^/]+)\/ai-edit$/)
+  if (aiEditMatch && request.method === 'POST') return generateAiEdit(request, env, user, decodeURIComponent(aiEditMatch[1]))
 
   const match = url.pathname.match(/^\/files\/([^/]+)(?:\/(content))?$/)
   if (!match) return error('NOT_FOUND', 'Route not found.', 404)

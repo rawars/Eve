@@ -18,4 +18,13 @@ export type FileResponse = { file: DesignFile }
 export type FileContentResponse<T = unknown> = { file: DesignFile; document: T }
 export type ProjectListResponse = { projects: Project[] }
 export type ProjectResponse = { project: Project }
+export type AiEditRequest = {
+  instruction: string
+  targetId: string
+  context: unknown
+}
+export type AiEditResponse = {
+  summary: string
+  elements: unknown[]
+}
 export type ApiError = { error: { code: string; message: string } }

@@ -1,4 +1,5 @@
 import { IconPlus } from '@tabler/icons-react'
+import type { AiEditResponse } from '@eve/contracts'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from 'react'
 import selectCursorUrl from '../assets/cursors/black.svg?url'
 import crosshairCursorUrl from '../assets/cursors/crosshair.svg?url'
@@ -26,6 +27,8 @@ import { SpatialIndex } from './spatialIndex'
 import { buildSpatialIndex, resolveVariablesOffThread, WORKER_INDEX_THRESHOLD } from './computation'
 import { CanvasTileRenderer } from './tileRenderer'
 import { ToolbarPanel, type Tool } from './ToolbarPanel'
+import { AiEditPopover } from './AiEditPopover'
+import { aiContext, aiHistoryLabel, applyAiStructure, isAiTarget } from './aiEdits'
 import { TypographyPanel } from './TypographyPanel'
 import { blendResolvedVariableColors, ensureThemeDocument, resolveVariable, resolvedVariableDocument } from './variables'
 import { RectanglePropertiesPanel, type RectangleAlignment } from './RectanglePropertiesPanel'
@@ -394,10 +397,11 @@ type CanvasEditorProps = {
   fileName?: string
   onFileNameChange?: (name: string) => void | Promise<void>
   onBack?: () => void | Promise<void>
+  onAiEdit?: (instruction: string, targetId: string, context: unknown) => Promise<AiEditResponse>
   account?: { label: string; onLogout: () => void | Promise<void> }
 }
 
-export function CanvasEditor({ initialDocument, onDocumentChange, fileName, onFileNameChange, onBack, account }: CanvasEditorProps = {}) {
+export function CanvasEditor({ initialDocument, onDocumentChange, fileName, onFileNameChange, onBack, onAiEdit, account }: CanvasEditorProps = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const textInputRef = useRef<HTMLInputElement>(null)
   const initializedRef = useRef(false)
@@ -408,12 +412,15 @@ export function CanvasEditor({ initialDocument, onDocumentChange, fileName, onFi
   const redoStackRef = useRef<CanvasDocument[]>([])
   const tileRendererRef = useRef(new CanvasTileRenderer())
   const suppressHistoryRef = useRef(false)
+  const pendingHistoryLabelRef = useRef<string | null>(null)
   const persistentDocumentRef = useRef<CanvasDocument | null>(null)
   const initialDocumentRef = useRef(initialDocument)
   const onDocumentChangeRef = useRef(onDocumentChange)
   onDocumentChangeRef.current = onDocumentChange
   const persistentDocumentCheckedRef = useRef(false)
   const [document, setDocumentState] = useState<CanvasDocument>({ layers: [], activeElementId: null, selectedElementIds: [], background: '#E0E0E0' })
+  const documentRef = useRef(document)
+  documentRef.current = document
   const boundVariableCount = useMemo(() => document.layers.reduce((count, layer) => count
     + layer.elements.reduce((total, element) => total + Object.keys(element.variableBindings ?? {}).length, 0), 0), [document.layers])
   const immediateResolvedLayers = useMemo(() => boundVariableCount < WORKER_INDEX_THRESHOLD
@@ -631,8 +638,9 @@ export function CanvasEditor({ initialDocument, onDocumentChange, fileName, onFi
         if (previous && documentContent(previous.document) === documentContent(document)) return current
         const entry: HistoryEntry = {
           id: crypto.randomUUID(), createdAt: Date.now(),
-          label: describeChange(previous?.document, document), document,
+          label: pendingHistoryLabelRef.current ?? describeChange(previous?.document, document), document,
         }
+        pendingHistoryLabelRef.current = null
         const next = [...current, entry].slice(-50)
         redoStackRef.current = []
         saveHistory(next)
@@ -641,6 +649,25 @@ export function CanvasEditor({ initialDocument, onDocumentChange, fileName, onFi
     }, 350)
     return () => window.clearTimeout(timer)
   }, [document, historyReady])
+
+  const aiTarget = document.selectedElementIds.length === 1
+    ? findElement(document.layers, document.selectedElementIds[0]) : undefined
+
+  async function submitAiEdit(instruction: string) {
+    if (!onAiEdit || !isAiTarget(aiTarget)) throw new Error('Select an editable Frame or Group first.')
+    const targetId = aiTarget.id
+    const context = aiContext(document, targetId)
+    const snapshot = JSON.stringify(context)
+    const result = await onAiEdit(instruction, targetId, context)
+    const current = documentRef.current
+    if (JSON.stringify(aiContext(current, targetId)) !== snapshot) {
+      throw new Error('The selected structure changed while the AI was working. Try again.')
+    }
+    const next = applyAiStructure(current, targetId, result)
+    pendingHistoryLabelRef.current = aiHistoryLabel(instruction)
+    setDocument(next)
+    return result.summary || 'AI changes applied.'
+  }
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -2100,6 +2127,10 @@ export function CanvasEditor({ initialDocument, onDocumentChange, fileName, onFi
       }}
       className="pointer-events-none absolute z-30 size-px overflow-hidden opacity-0"
       style={{ left: textDraft.screenX, top: textDraft.screenY }} />}
+    {onAiEdit && isAiTarget(aiTarget) && <AiEditPopover targetName={aiTarget.name}
+      left={Math.max(8, Math.min(canvasSize.width - 36, viewport.x + (aiTarget.x + aiTarget.width) * viewport.zoom + 8))}
+      top={Math.max(8, Math.min(canvasSize.height - 36, viewport.y + aiTarget.y * viewport.zoom))}
+      onSubmit={submitAiEdit} />}
     <ToolbarPanel activeTool={activeTool} onToolChange={(tool) => { setActiveTool(tool); setHistoryOpen(false); setAssetsOpen(false) }}
       account={account}
       onDownload={() => { void import('./export').then(({ downloadDocument }) => downloadDocument(document)) }}
