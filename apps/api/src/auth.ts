@@ -71,7 +71,15 @@ export async function register(request: Request, env: Env) {
       env.DB.prepare('INSERT INTO projects (id, owner_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)')
         .bind(projectId, id, 'My project', createdAt, createdAt),
     ])
-  } catch { return error('EMAIL_IN_USE', 'An account with this email already exists.', 409) }
+  } catch (cause) {
+    // A concurrent registration can still win after the initial lookup. Only
+    // report a conflict when the account now exists; do not disguise unrelated
+    // D1 failures as a duplicate email.
+    const duplicate = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(credentials.email).first()
+    if (duplicate) return error('EMAIL_IN_USE', 'An account with this email already exists.', 409)
+    console.error('Failed to create account', cause)
+    throw cause
+  }
   const session = await createSession(env, id)
   return json({ user: { id, email: credentials.email, createdAt } } satisfies AuthResponse, 201, {
     'set-cookie': sessionCookie(session.token, session.maxAge, !env.APP_ORIGIN.startsWith('http://localhost')),
